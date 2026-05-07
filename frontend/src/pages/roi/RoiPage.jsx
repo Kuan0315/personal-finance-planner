@@ -2,11 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Chart from 'chart.js/auto'
 import './RoiPage.css'
+import { apiRequest, getStoredUser } from '../../utils/session'
 
-// ROI CALCULATOR PAGE
-// ═══════════════════════════════════════════════════════
 const RoiPage = ({ user }) => {
-  const navigate = useNavigate();
+
   const [roiMode, setRoiMode] = useState('compound');
   const [formData, setFormData] = useState({ principal: 10000, monthly: 200, rate: 7.0, duration: 10 });
   const [activeRate, setActiveRate] = useState(7);
@@ -14,12 +13,38 @@ const RoiPage = ({ user }) => {
   const [rateA, setRateA] = useState(5.0);
   const [rateB, setRateB] = useState(8.0);
   const [results, setResults] = useState(null);
-  // ── FIX: separate flag so chart renders AFTER canvas mounts ──
   const [chartData, setChartData] = useState(null);
   const chartRef      = useRef(null);
   const chartInstance = useRef(null);
+  const [history, setHistory] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [justCalculated, setJustCalculated] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => { if (!user?.email) navigate('/login'); }, [user, navigate]);
+
+    const fetchHistory = async () => {
+      const uid = user?.id || user?._id || getStoredUser()?._id || getStoredUser()?.id || getStoredUser()?.email || ''
+      setLoadingHistory(true)
+      try {
+        const res = await apiRequest(`/api/roi/history/${encodeURIComponent(uid)}`, { method: 'GET' })
+        const serverHistory = Array.isArray(res) ? res : []
+        setHistory(serverHistory)
+      } catch (err) {
+        console.error('Failed to fetch history', err)
+        setHistory([])
+      } finally {
+        setLoadingHistory(false)
+      }
+    }
+
+    // Fetch saved ROI history (server or localStorage fallback)
+    useEffect(() => {
+      fetchHistory()
+    }, [user])
 
   // ── FIX: draw chart only after results panel is in the DOM ──
   useEffect(() => {
@@ -73,6 +98,8 @@ const RoiPage = ({ user }) => {
     // Set results first (mounts the canvas), then chart data (triggers useEffect)
     setResults({ invested: Math.round(invested), fv: Math.round(fv), profit: Math.round(profit), gain });
     setChartData({ labels, values });
+    // mark that user just calculated so we can auto-save once results are applied
+    setJustCalculated(true);
   };
 
   const calcScenario = (rate) => {
@@ -83,24 +110,136 @@ const RoiPage = ({ user }) => {
     return { invested: Math.round(invested), fv: Math.round(fv), profit: Math.round(profit), gain: invested > 0 ? ((profit / invested) * 100).toFixed(1) : '0.0' };
   };
 
+  // Save current result to server
+  const saveToHistory = async () => {
+    if (!results) return;
+    const payload = {
+      mode: roiMode,
+      principal: formData.principal,
+      monthlyContribution: formData.monthly,
+      annualInterestRate: formData.rate,
+      durationInYears: formData.duration,
+      invested: results.invested,
+      futureValue: results.fv,
+      profit: results.profit,
+      gainPercentage: results.gain,
+      timeLineData: chartData || { labels: [], values: [] },
+    }
+
+    setSaving(true)
+    try {
+      const res = await apiRequest('/api/roi/history', { method: 'POST', body: JSON.stringify(payload) })
+      const saved = res && res._id ? res : null
+      if (saved) setHistory([saved, ...history])
+    } catch (err) {
+      console.error('Failed to save history', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Auto-save after calculateResults updates `results` and `chartData`
+  useEffect(() => {
+    if (!justCalculated) return;
+    if (!results) return;
+    // debounce a tick to ensure chartData is present
+    const t = setTimeout(() => { saveToHistory(); setJustCalculated(false); }, 100);
+    return () => clearTimeout(t);
+  }, [justCalculated, results, chartData]);
+
+  const deleteHistoryItem = async (item) => {
+    try {
+      if (item._id) await apiRequest(`/api/roi/history/${encodeURIComponent(item._id)}`, { method: 'DELETE' })
+    } catch (err) {
+      console.error('Failed to delete item on server', err)
+    }
+    const next = history.filter(i => String(i._id) !== String(item._id))
+    setHistory(next)
+  }
+
   const sA = results ? calcScenario(rateA) : null;
   const sB = results ? calcScenario(rateB) : null;
   const fmt = n => 'RM ' + n.toLocaleString();
   const modeBadgeStyle = { background: roiMode === 'compound' ? '#dbeafe' : '#ede9fe', color: roiMode === 'compound' ? '#3b6eff' : '#8b5cf6' };
 
+  const restoreHistoryItem = (item) => {
+    setRoiMode(item.mode || 'compound')
+    setFormData({
+      principal: item.principal || 0,
+      monthly: item.monthlyContribution || item.monthly || 0,
+      rate: item.annualInterestRate || item.annualRate || item.rate || 0,
+      duration: item.durationInYears || item.years || item.duration || 1,
+    })
+    setShowHistory(false)
+    // re-calc after state settles
+    setTimeout(() => calculateResults(), 120)
+  }
+
+  const openHistory = async () => {
+    await fetchHistory()
+    setShowHistory(true)
+  }
+
+  const toggleSelectMode = () => {
+    if (selectionMode) {
+      setSelectedIds(new Set())
+      setSelectionMode(false)
+    } else {
+      setSelectionMode(true)
+    }
+  }
+
+  const toggleSelectItem = (id) => {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedIds(next)
+  }
+
+  const selectAll = () => {
+    if (selectedIds.size === history.length) {
+      setSelectedIds(new Set())
+      return
+    }
+    const all = new Set(history.map(i => String(i._id)))
+    setSelectedIds(all)
+  }
+
+  const deleteSelectedItems = async () => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.size} selected item(s)?`)) return;
+    setSaving(true)
+    try {
+      const ids = Array.from(selectedIds)
+      await apiRequest('/api/roi/history', { method: 'DELETE', body: JSON.stringify({ ids }) })
+      const next = history.filter(i => !ids.includes(String(i._id)))
+      setHistory(next)
+      setSelectedIds(new Set())
+      setSelectionMode(false)
+    } catch (err) {
+      console.error('Bulk delete failed', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
+    <>
     <div className="main-content">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <h1 className="page-title">ROI Calculator</h1>
-        <div className="roi-mode-toggle">
-          <button className={`roi-mode-btn ${roiMode === 'compound' ? 'active compound-active' : ''}`} onClick={() => setRoiMode('compound')}>
-            <span className="mode-dot compound-dot"></span> Compound
-          </button>
-          <span className="roi-divider-pipe">|</span>
-          <button className={`roi-mode-btn ${roiMode === 'simple' ? 'active simple-active' : ''}`} onClick={() => setRoiMode('simple')}>
-            Simple <span className="mode-dot simple-dot"></span>
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="roi-mode-toggle">
+            <button className={`roi-mode-btn ${roiMode === 'compound' ? 'active compound-active' : ''}`} onClick={() => setRoiMode('compound')}>
+              <span className="mode-dot compound-dot"></span> Compound
+            </button>
+            <span className="roi-divider-pipe">|</span>
+            <button className={`roi-mode-btn ${roiMode === 'simple' ? 'active simple-active' : ''}`} onClick={() => setRoiMode('simple')}>
+              Simple <span className="mode-dot simple-dot"></span>
+            </button>
+          </div>
+          <button className="icon-btn three-dot" onClick={openHistory} aria-label="Open history">⋯</button>
         </div>
       </div>
 
@@ -110,6 +249,8 @@ const RoiPage = ({ user }) => {
         <strong>{roiMode === 'compound' ? 'Compound mode active' : 'Simple mode active'}</strong>
         <span>{roiMode === 'compound' ? ' — interest is reinvested each month and added to your balance.' : ' — interest is calculated only on the initial investment and does not compound.'}</span>
       </div>
+
+      {/* compact header actions moved into header */}
 
       {/* Main layout — CSS grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '420px 1fr', gap: '20px', alignItems: 'start' }}>
@@ -199,14 +340,17 @@ const RoiPage = ({ user }) => {
                     <canvas ref={chartRef}></canvas>
                   </div>
                 </div>
-                {roiMode === 'simple' && (
+                  {roiMode === 'simple' && (
                   <div className="compound-hint mt-3">
                     <i className="bi bi-arrow-left-right me-2"></i>
                     <span>Compound earns <strong>RM {Math.max(0, Math.round(calcCompound(formData.principal, formData.monthly, formData.rate / 100, formData.duration) - results.fv)).toLocaleString()}</strong> more over {formData.duration} years.</span>
                     <button className="hint-link ms-1" onClick={() => setRoiMode('compound')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#3b6eff', fontWeight: 600, textDecoration: 'underline' }}>Switch to Compound</button>
                   </div>
                 )}
+
+                {/* Save button removed — auto-save enabled after calculation */}
               </div>
+              {/* History removed from main flow — accessible via History button/modal */}
 
               {/* Scenario Comparison */}
               <div className="roi-card">
@@ -264,9 +408,74 @@ const RoiPage = ({ user }) => {
         </div>
       </div>
     </div>
+    {showHistory && (
+      <div className="roi-history-modal" role="dialog">
+        <div className="roi-history-dialog">
+          <div className="roi-history-header">
+            <h3>Saved ROI History</h3>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {selectionMode ? (
+                <>
+                  <button className="history-pill-btn history-pill-soft" onClick={selectAll}>{selectedIds.size === history.length ? 'Unselect all' : 'Select all'}</button>
+                  <button className="history-pill-btn history-pill-danger" onClick={deleteSelectedItems} disabled={selectedIds.size === 0 || saving}>{saving ? 'Deleting...' : `Delete (${selectedIds.size})`}</button>
+                  <button className="icon-btn close-cross" onClick={() => toggleSelectMode()} aria-label="Cancel selection">✕</button>
+                </>
+              ) : (
+                <>
+                  <button className="history-pill-btn history-pill-soft" onClick={() => toggleSelectMode()}>Select</button>
+                  <button className="icon-btn close-cross" onClick={() => setShowHistory(false)} aria-label="Close history">✕</button>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="roi-history-body">
+            {loadingHistory ? (
+              <div className="empty">Loading history...</div>
+            ) : history.length === 0 ? (
+              <div className="empty">No saved ROI calculations yet.</div>
+            ) : (
+              <div className="history-list">
+                {history.map(item => (
+                  <div key={item._id} className="history-item">
+                    {selectionMode && (
+                      <div style={{ paddingRight: 8 }}>
+                        <input type="checkbox" checked={selectedIds.has(String(item._id))} onChange={() => toggleSelectItem(String(item._id))} />
+                      </div>
+                    )}
+                    <div className="history-main">
+                      <div className="history-topline">
+                        <div className="history-title">{(item.mode || '').toUpperCase()} · {item.years} yr</div>
+                        <div className="history-badge">{item.gainPercentage || item.gain || 0}% gain</div>
+                      </div>
+                      <div className="history-date">{new Date(item.createdAt || item._id || Date.now()).toLocaleString()}</div>
+                      <div className="history-stats">
+                        <div className="history-stat">
+                          <span>Invested</span>
+                          <strong>{fmt(item.invested || 0)}</strong>
+                        </div>
+                        <div className="history-stat">
+                          <span>Future value</span>
+                          <strong>{fmt(item.futureValue || item.fv || 0)}</strong>
+                        </div>
+                        <div className="history-stat profit-stat">
+                          <span>Profit</span>
+                          <strong>+{fmt(item.profit || 0)}</strong>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="history-actions">
+                      {!selectionMode && <button className="btn-link" onClick={() => restoreHistoryItem(item)}>Restore</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
-
-// ═══════════════════════════════════════════════════════
 
 export default RoiPage
