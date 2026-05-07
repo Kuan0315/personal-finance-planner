@@ -12,10 +12,13 @@ const PORT = process.env.PORT || 3001;
 
 const User = require('./models/User')
 
+const goalRoutes = require('./routes/goalRoutes');
+
 app.use(cors());
 app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/goals', goalRoutes);
 
 // 1. Your new "Front Door" route correctly placed AFTER app is defined
 app.get('/', (req, res) => {
@@ -73,3 +76,4 @@ app.put('/api/goals/:id/apply-portfolio', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Personal Finance Planner API is running on http://localhost:${PORT}`);
 });
+

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MOCK_GOALS } from '../../data/mockGoals'
+import { apiRequest } from '../../utils/session'
 import { GOAL_FILTERS, GOAL_STATUS_LABELS, GOAL_STATUS } from '../../constants/goalStatus'
 import './GoalsPage.css'
 
@@ -8,7 +8,7 @@ import './GoalsPage.css'
 // ═══════════════════════════════════════════════════════
 const GoalsPage = ({ user }) => {
   const navigate = useNavigate();
-  const [goals, setGoals] = useState(MOCK_GOALS);
+  const [goals, setGoals] = useState([]);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -16,34 +16,128 @@ const GoalsPage = ({ user }) => {
   const [showAIModal, setShowAIModal] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
   const [formData, setFormData] = useState({ icon: '🏠', name: '', desc: '', target: '', savings: '', monthly: '', dateLabel: '' });
+  const [aiData, setAIData] = useState(null);
 
   useEffect(() => { if (!user?.email) navigate('/login'); }, [user, navigate]);
+  useEffect(() => {
+    apiRequest('/api/goals').then(setGoals).catch(console.error);
+  }, []);
 
   const filteredGoals = goals.filter(goal => {
     const matchFilter = filter === 'all' || goal.status === filter;
-    const matchSearch = !searchTerm || goal.name.toLowerCase().includes(searchTerm.toLowerCase()) || goal.desc.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = !searchTerm || goal.name.toLowerCase().includes(searchTerm.toLowerCase()) || (goal.desc || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchFilter && matchSearch;
   });
 
-  const handleSaveGoal = (e) => {
-    e.preventDefault();
-    if (!formData.name) { alert('Please enter a goal name.'); return; }
-    if (editingGoal) {
-      setGoals(goals.map(g => g.id === editingGoal.id ? { ...editingGoal, ...formData } : g));
-      setEditingGoal(null);
-    } else {
-      setGoals([...goals, { id: Math.max(...goals.map(g => g.id), 0) + 1, ...formData, status: GOAL_STATUS.ON_TRACK, progressPercent: 0 }]);
-    }
-    setShowModal(false);
-    setFormData({ icon: '🏠', name: '', desc: '', target: '', savings: '', monthly: '', dateLabel: '' });
+  const summary = {
+    totalSaved: goals.reduce((sum, g) => sum + (g.currentSavings || 0), 0),
+    totalTarget: goals.reduce((sum, g) => sum + (g.targetAmount || 0), 0),
+    onTrackCount: goals.filter(g => g.status === 'on-track').length,
+    totalGoals: goals.length,
+    needAttention: goals.filter(g => g.status === 'at-risk' || g.status === 'high-risk').length,
+    monthlyTotal: goals.reduce((sum, g) => sum + (g.monthlyContribution || g.monthlySavingNeeded || 0), 0),
+    atRiskGoals: goals.filter(g => g.status === 'at-risk' || g.status === 'high-risk'),
   };
 
-  const handleDeleteGoal = (id) => { if (window.confirm('Delete this goal?')) setGoals(goals.filter(g => g.id !== id)); };
-  const handleEditGoal = (goal) => { setEditingGoal(goal); setFormData(goal); setShowModal(true); };
-  const openAdd = () => { setEditingGoal(null); setFormData({ icon: '🏠', name: '', desc: '', target: '', savings: '', monthly: '', dateLabel: '' }); setShowModal(true); };
+  // Unified status + lag badge — no contradictions
+  const StatusBadge = ({ status, lagPercent }) => {
+    if (status === 'completed') return (
+      <span style={{ fontSize: '.75rem', fontWeight: 700, color: '#4b5563', background: '#f3f4f6', borderRadius: '99px', padding: '3px 10px' }}>
+        Completed
+      </span>
+    );
+    if (status === 'high-risk') return (
+      <span style={{ fontSize: '.75rem', fontWeight: 700, color: '#b91c1c', background: '#fee2e2', borderRadius: '99px', padding: '3px 10px' }}>
+        {lagPercent > 0 ? `${lagPercent}% behind` : 'High Risk'}
+      </span>
+    );
+    if (status === 'at-risk') return (
+      <span style={{ fontSize: '.75rem', fontWeight: 700, color: '#c2410c', background: '#ffedd5', borderRadius: '99px', padding: '3px 10px' }}>
+        {lagPercent > 0 ? `${lagPercent}% behind` : 'At Risk'}
+      </span>
+    );
+    return (
+      <span style={{ fontSize: '.75rem', fontWeight: 700, color: '#15803d', background: '#dcfce7', borderRadius: '99px', padding: '3px 10px' }}>
+        On pace
+      </span>
+    );
+  };
+
+  // Save (create or update)
+  const handleSaveGoal = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        name: formData.name,
+        description: formData.desc,
+        icon: formData.icon,
+        targetAmount: parseFloat(String(formData.target).replace(/[^0-9.]/g, '')),
+        currentSavings: parseFloat(String(formData.savings).replace(/[^0-9.]/g, '')) || 0,
+        targetDate: formData.dateLabel,
+        monthlyContribution: parseFloat(String(formData.monthly).replace(/[^0-9.]/g, '')) || 0,
+      };
+
+      if (!payload.name) { alert('Please enter a goal name.'); return; }
+      if (!payload.targetAmount) { alert('Please enter a target amount.'); return; }
+      if (!payload.targetDate) { alert('Please select a target date.'); return; }
+
+      const saved = editingGoal
+        ? await apiRequest(`/api/goals/${editingGoal.id}`, { method: 'PUT', body: JSON.stringify(payload) })
+        : await apiRequest('/api/goals', { method: 'POST', body: JSON.stringify(payload) });
+
+      setGoals(prev => editingGoal
+        ? prev.map(g => g.id === editingGoal.id ? saved : g)
+        : [...prev, saved]
+      );
+      setShowModal(false);
+    } catch (err) {
+      alert(`Failed to save goal: ${err.message}`);
+      console.error(err);
+    }
+  };
+
+  // Delete
+  const handleDeleteGoal = async (id) => {
+    if (!window.confirm('Delete this goal?')) return;
+    await apiRequest(`/api/goals/${id}`, { method: 'DELETE' });
+    setGoals(prev => prev.filter(g => g.id !== id));
+  };
+
+  const handleEditGoal = (goal) => {
+    setEditingGoal(goal);
+    setFormData({
+      icon: goal.icon || '🏠',
+      name: goal.name || '',
+      desc: goal.desc || '',
+      target: goal.targetAmount || '',
+      savings: goal.currentSavings || '',
+      monthly: goal.monthlyContribution || '',
+      dateLabel: goal.dateLabel || '',
+    });
+    setShowModal(true);
+  };
+
+  const openAdd = () => {
+    setEditingGoal(null);
+    setFormData({ icon: '🏠', name: '', desc: '', target: '', savings: '', monthly: '', dateLabel: '' });
+    setShowModal(true);
+  };
+
+  // AI Advisory
+  const handleOpenAI = async (goal) => {
+    try {
+      const data = await apiRequest(`/api/goals/${goal.id}/ai-advice`);
+      setAIData(data);
+      setSelectedOption(null);
+      setShowAIModal(true);
+    } catch (err) {
+      alert(`Failed to load AI advice: ${err.message}`);
+    }
+  };
 
   return (
     <div className="main-content">
+
       {/* Header */}
       <div className="header-container">
         <h1 className="page-title">Financial Goals</h1>
@@ -56,37 +150,47 @@ const GoalsPage = ({ user }) => {
         </div>
       </div>
 
-      {/* Summary cards — equal CSS grid */}
+      {/* Summary Cards */}
       <div className="grid-4col mb-5">
         <div className="summary-card summary-blue">
           <p className="summary-label">Total Saved</p>
-          <p className="summary-value">RM 384,800</p>
-          <p className="summary-sub">↑ +8.3% vs last quarter</p>
+          <p className="summary-value">RM {summary.totalSaved.toLocaleString()}</p>
+          <p className="summary-sub">Across {summary.totalGoals} goals</p>
         </div>
         <div className="summary-card summary-green">
           <p className="summary-label">Goals On Track</p>
-          <p className="summary-value">3 / 7</p>
-          <p className="summary-sub">2 need attention</p>
+          <p className="summary-value">{summary.onTrackCount} / {summary.totalGoals}</p>
+          <p className="summary-sub">{summary.needAttention} need attention</p>
         </div>
         <div className="summary-card summary-orange">
           <p className="summary-label">Monthly Contribution</p>
-          <p className="summary-value">RM 6,825</p>
-          <p className="summary-sub">↑ +RM400 this month</p>
+          <p className="summary-value">RM {summary.monthlyTotal.toLocaleString()}</p>
+          <p className="summary-sub">Total across all goals</p>
         </div>
         <div className="summary-card summary-rainbow">
-          <p className="summary-label">Projected by 2030</p>
-          <p className="summary-value">RM 500,000</p>
-          <p className="summary-sub">Across all goals</p>
+          <p className="summary-label">Overall Progress</p>
+          <p className="summary-value">
+            {summary.totalTarget > 0 ? Math.round((summary.totalSaved / summary.totalTarget) * 100) : 0}%
+          </p>
+          <p className="summary-sub">RM {summary.totalTarget.toLocaleString()} total target</p>
         </div>
       </div>
 
-      {/* Alert */}
+      {/* Alert Banner */}
       <div className="alert-banner mb-4">
         <i className="bi bi-info-circle-fill me-2"></i>
-        <span><strong>3 goals are on track.</strong> Your Emergency Fund is falling behind — you're 12% off track.</span>
+        {summary.needAttention === 0 ? (
+          <span><strong>All goals are on track.</strong> Keep up the great work!</span>
+        ) : (
+          <span>
+            <strong>{summary.onTrackCount} goals are on track.</strong>{' '}
+            {summary.atRiskGoals.map(g => g.name).join(', ')}{' '}
+            {summary.needAttention === 1 ? 'is' : 'are'} falling behind — consider reviewing.
+          </span>
+        )}
       </div>
 
-      {/* Filter tabs */}
+      {/* Filter Tabs */}
       <div className="filter-tabs mb-4">
         {GOAL_FILTERS.map(f => (
           <button key={f.value} className={`filter-tab ${filter === f.value ? 'active' : ''}`} onClick={() => setFilter(f.value)}>
@@ -95,26 +199,26 @@ const GoalsPage = ({ user }) => {
         ))}
       </div>
 
-      {/* Goal cards — CSS grid */}
+      {/* Goal Cards */}
       <div className="grid-3col">
         {filteredGoals.map(goal => (
           <div key={goal.id} className="goal-card">
             <div className="goal-card-top">
               <span className="goal-icon">{goal.icon}</span>
-              <span className={`status-badge ${goal.status}`}>
-                {GOAL_STATUS_LABELS[goal.status]}
-              </span>
+              <StatusBadge status={goal.status} lagPercent={goal.lagPercent || 0} />
             </div>
             <h5 className="goal-title">{goal.name}</h5>
             <p className="goal-desc">{goal.desc || 'No description provided.'}</p>
-            <div className="progress goal-progress"><div className="progress-bar" style={{ width: `${goal.progressPercent}%` }}></div></div>
+            <div className="progress goal-progress">
+              <div className="progress-bar" style={{ width: `${goal.progressPercent}%` }}></div>
+            </div>
             <p className="goal-amounts"><strong>{goal.savings}</strong> <span>/ {goal.target}</span></p>
             <div className="goal-meta">
               <div className="meta-row">
                 <span><i className="bi bi-calendar3"></i> {goal.status === 'completed' ? 'Completed:' : 'Target:'} {goal.dateLabel}</span>
                 <div className="goal-actions">
                   {goal.hasAI && (
-                    <button className="action-btn" title="AI Advisory" onClick={() => { setSelectedOption(null); setShowAIModal(true); }} style={{ color: '#6366f1' }}>
+                    <button className="action-btn" title="AI Advisory" onClick={() => handleOpenAI(goal)} style={{ color: '#6366f1' }}>
                       <i className="bi bi-robot"></i>
                     </button>
                   )}
@@ -122,12 +226,12 @@ const GoalsPage = ({ user }) => {
                   <button className="action-btn delete-btn" onClick={() => handleDeleteGoal(goal.id)}><i className="bi bi-trash3"></i></button>
                 </div>
               </div>
-              <span className="meta-monthly"><i className="bi bi-coin"></i> {goal.monthly} / month</span>
+              <span className="meta-monthly"><i className="bi bi-coin"></i> RM {(goal.monthlyContribution || goal.monthlySavingNeeded || 0).toLocaleString()} / month</span>
             </div>
           </div>
         ))}
 
-        {/* Create new goal card */}
+        {/* Create New Goal Card */}
         <div className="goal-card create-goal-card" onClick={openAdd}>
           <div className="create-goal-inner">
             <div className="create-plus"><i className="bi bi-plus-lg"></i></div>
@@ -137,77 +241,137 @@ const GoalsPage = ({ user }) => {
         </div>
       </div>
 
-      {/* AI Advisory Modal */}
-      {showAIModal && (
+      {/* ── AI Advisory Modal ── */}
+      {showAIModal && aiData && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050 }}
           onClick={e => { if (e.target === e.currentTarget) setShowAIModal(false); }}>
-          <div style={{ background: 'white', borderRadius: '22px', maxWidth: '560px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(59,110,255,.18)' }}>
+          <div style={{ background: 'white', borderRadius: '22px', maxWidth: '580px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(59,110,255,.18)' }}>
+
+            {/* Modal Header */}
             <div style={{ background: '#2c3ecc', padding: '28px 26px 22px', borderRadius: '22px 22px 0 0' }}>
               <p style={{ color: 'rgba(255,255,255,.75)', fontSize: '.85rem', fontWeight: 500, margin: '0 0 4px' }}>AI Advisory</p>
-              <h3 style={{ color: '#fff', fontFamily: 'Sora, sans-serif', fontSize: '1.3rem', fontWeight: 700, margin: '0 0 16px' }}>Early Retirement Fund</h3>
+              <h3 style={{ color: '#fff', fontFamily: 'Sora, sans-serif', fontSize: '1.3rem', fontWeight: 700, margin: '0 0 16px' }}>
+                {aiData.goal.name}
+              </h3>
               <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                {[['Target', 'RM 1,000,000'], ['Saved', 'RM 210,000'], ['Monthly', 'RM 2,100'], ['Deadline', 'Mar 2055'], ['Lag', '12% behind']].map(([label, val]) => (
+                {[
+                  ['Target', aiData.goal.target],
+                  ['Saved', aiData.goal.savings],
+                  ['Monthly', aiData.goal.monthly],
+                  ['Time Left', `${aiData.monthsRemaining} months`],
+                  ['Lag', aiData.goal.lagPercent > 0 ? `${aiData.goal.lagPercent}% behind` : 'On pace'],
+                ].map(([label, val]) => (
                   <div key={label}>
                     <div style={{ color: 'rgba(255,255,255,.6)', fontSize: '.72rem' }}>{label}</div>
-                    <div style={{ color: label === 'Lag' ? '#ff8b8b' : '#fff', fontWeight: 700, fontSize: '.88rem' }}>{val}</div>
+                    <div style={{ color: label === 'Lag' && aiData.goal.lagPercent > 0 ? '#ff8b8b' : '#fff', fontWeight: 700, fontSize: '.88rem' }}>{val}</div>
                   </div>
                 ))}
               </div>
-            </div>
-            <div style={{ padding: '24px 26px' }}>
-              <div style={{ fontSize: '.7rem', fontWeight: 700, letterSpacing: '.08em', color: '#9ca3af', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                TWO PATHS FORWARD <span style={{ flex: 1, height: 1, background: '#e2e6f0', display: 'block' }}></span>
+
+              {/* Progress bar */}
+              <div style={{ marginTop: '14px', background: 'rgba(255,255,255,.1)', borderRadius: '99px', height: '6px', overflow: 'hidden' }}>
+                <div style={{ width: `${aiData.goal.progressPercent}%`, background: '#4ade80', height: '100%', borderRadius: '99px' }} />
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
+                <span style={{ color: 'rgba(255,255,255,.6)', fontSize: '.7rem' }}>Progress: {aiData.goal.progressPercent}%</span>
+                <span style={{ color: aiData.goal.lagPercent > 10 ? '#ff8b8b' : '#4ade80', fontSize: '.7rem', fontWeight: 700 }}>
+                  {aiData.goal.lagPercent > 0 ? `${aiData.goal.lagPercent}% behind` : 'On pace'}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px 26px' }}>
+
+              {/* Two Paths Forward */}
+              <div style={{ fontSize: '.7rem', fontWeight: 700, letterSpacing: '.08em', color: '#9ca3af', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                TWO PATHS FORWARD
+                <span style={{ flex: 1, height: 1, background: '#e2e6f0', display: 'block' }}></span>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
                 {[
-                  { key: 'A', color: '#3b6eff', label: 'Option A – TIME', big: '+42', unit: 'months', desc: 'Keep saving RM 2,100/month and extend your deadline by 3 years 6 months', tag: 'Retire by Sep 2058', tagStyle: { background: '#f3f5f9', color: '#5c6170' } },
-                  { key: 'B', color: '#22c55e', label: 'Option B – AMOUNT', big: '+RM252', unit: '/mo', desc: 'Increase to RM 2,352/month and hit your original March 2055 goal', tag: 'Stay on track for 2055', tagStyle: { background: '#dcfce7', color: '#15803d' } },
+                  {
+                    key: 'A', color: '#3b6eff', label: 'Option A – TIME',
+                    big: `+${aiData.optionA.extraMonths}`, unit: 'months',
+                    desc: aiData.optionA.desc,
+                    tag: `New deadline: ${aiData.optionA.newDeadline}`,
+                    tagStyle: { background: '#f3f5f9', color: '#5c6170' },
+                  },
+                  {
+                    key: 'B', color: '#22c55e', label: 'Option B – AMOUNT',
+                    big: `+RM${(aiData.optionB.increase || 0).toLocaleString()}`, unit: '/mo',
+                    desc: aiData.optionB.desc,
+                    tag: 'Keep original deadline',
+                    tagStyle: { background: '#dcfce7', color: '#15803d' },
+                  },
                 ].map(opt => (
                   <div key={opt.key} onClick={() => setSelectedOption(opt.key)}
-                    style={{ border: `1.5px solid ${selectedOption === opt.key ? '#3b6eff' : '#e2e6f0'}`, borderRadius: '16px', padding: '16px', cursor: 'pointer', boxShadow: selectedOption === opt.key ? '0 0 0 3px rgba(59,110,255,.15)' : 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    style={{ border: `1.5px solid ${selectedOption === opt.key ? '#3b6eff' : '#e2e6f0'}`, borderRadius: '16px', padding: '16px', cursor: 'pointer', boxShadow: selectedOption === opt.key ? '0 0 0 3px rgba(59,110,255,.15)' : 'none', display: 'flex', flexDirection: 'column', gap: '8px', transition: 'all .2s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: '.72rem', fontWeight: 700, color: opt.color }}>{opt.label}</span>
-                      <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${selectedOption === opt.key ? '#3b6eff' : '#e2e6f0'}`, background: selectedOption === opt.key ? 'radial-gradient(circle at center, #3b6eff 45%, #fff 45%)' : 'transparent' }}></div>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${selectedOption === opt.key ? '#3b6eff' : '#e2e6f0'}`, background: selectedOption === opt.key ? 'radial-gradient(circle at center, #3b6eff 45%, #fff 45%)' : 'transparent' }} />
                     </div>
-                    <div style={{ fontFamily: 'Sora,sans-serif', fontSize: '1.6rem', fontWeight: 800 }}>{opt.big} <span style={{ fontSize: '.9rem', fontWeight: 500, color: '#5c6170' }}>{opt.unit}</span></div>
+                    <div style={{ fontFamily: 'Sora,sans-serif', fontSize: '1.6rem', fontWeight: 800 }}>
+                      {opt.big} <span style={{ fontSize: '.9rem', fontWeight: 500, color: '#5c6170' }}>{opt.unit}</span>
+                    </div>
                     <p style={{ fontSize: '.76rem', color: '#5c6170', lineHeight: 1.4, margin: 0 }}>{opt.desc}</p>
                     <span style={{ ...opt.tagStyle, display: 'inline-block', fontSize: '.72rem', fontWeight: 600, borderRadius: '99px', padding: '3px 10px' }}>{opt.tag}</span>
                   </div>
                 ))}
               </div>
+
+              {/* Gemini AI Advisory */}
               <div style={{ background: '#f0f4ff', borderRadius: '12px', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#3b6eff', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✦</div>
+                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#3b6eff', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>✦</div>
                     <div>
                       <p style={{ fontWeight: 700, fontSize: '.85rem', margin: 0 }}>WealthTrack AI Advisor</p>
-                      <p style={{ fontSize: '.72rem', color: '#9ca3af', margin: 0 }}>Powered by Gemini · Smart Suggestions</p>
+                      <p style={{ fontSize: '.72rem', color: '#9ca3af', margin: 0 }}>Powered by Gemini · Personalized Analysis</p>
                     </div>
                   </div>
                   <span style={{ background: '#e8eeff', color: '#3b6eff', fontSize: '.7rem', fontWeight: 700, borderRadius: '99px', padding: '3px 10px' }}>AI Generated</span>
                 </div>
-                <p style={{ fontSize: '.84rem', lineHeight: 1.6, margin: '0 0 12px' }}>
-                  You're already <strong>RM 210,000</strong> into your retirement journey. Adding just <span style={{ color: '#22c55e', fontWeight: 700, background: '#dcfce7', borderRadius: 4, padding: '1px 5px' }}>+RM 252/month</span> keeps your original March 2055 retirement fully intact.
-                </p>
-                <div style={{ background: '#fff', borderRadius: '8px', padding: '10px 12px', display: 'flex', gap: '10px' }}>
-                  <span>💡</span>
-                  <p style={{ fontSize: '.78rem', color: '#5c6170', margin: 0 }}>Automating your monthly transfer removes the temptation to skip — consistency compounds faster than any single large contribution.</p>
-                </div>
+
+                {aiData.aiAdvice ? (
+                  <p style={{ fontSize: '.84rem', lineHeight: 1.7, margin: 0, color: '#1a1d2e', whiteSpace: 'pre-line' }}>
+                    {aiData.aiAdvice}
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(aiData.tips || []).map((tip, i) => (
+                      <div key={i} style={{ background: '#fff', borderRadius: '8px', padding: '10px 12px', display: 'flex', gap: '10px' }}>
+                        <span>💡</span>
+                        <p style={{ fontSize: '.78rem', color: '#5c6170', margin: 0 }}>{tip}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Buttons */}
               <div style={{ display: 'flex', gap: '8px', marginTop: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <button style={{ border: '1.5px solid #e2e6f0', background: '#fff', borderRadius: '99px', padding: '8px 16px', fontFamily: 'DM Sans,sans-serif', fontSize: '.84rem', fontWeight: 600, cursor: 'pointer' }}>↻ Regenerate</button>
-                <button onClick={() => setShowAIModal(false)} style={{ border: '1.5px solid #e2e6f0', background: '#fff', borderRadius: '99px', padding: '8px 16px', fontFamily: 'DM Sans,sans-serif', fontSize: '.84rem', fontWeight: 600, cursor: 'pointer' }}>Dismiss</button>
-                <button disabled={!selectedOption} onClick={() => { alert(`Applied Option ${selectedOption}!`); setShowAIModal(false); }}
+                <button onClick={() => handleOpenAI(aiData.goal)}
+                  style={{ border: '1.5px solid #e2e6f0', background: '#fff', borderRadius: '99px', padding: '8px 16px', fontFamily: 'DM Sans,sans-serif', fontSize: '.84rem', fontWeight: 600, cursor: 'pointer' }}>
+                  ↻ Regenerate
+                </button>
+                <button onClick={() => setShowAIModal(false)}
+                  style={{ border: '1.5px solid #e2e6f0', background: '#fff', borderRadius: '99px', padding: '8px 16px', fontFamily: 'DM Sans,sans-serif', fontSize: '.84rem', fontWeight: 600, cursor: 'pointer' }}>
+                  Dismiss
+                </button>
+                <button disabled={!selectedOption}
+                  onClick={() => { alert(`Applied Option ${selectedOption}!`); setShowAIModal(false); }}
                   style={{ marginLeft: 'auto', background: selectedOption ? '#3b6eff' : '#d1d5db', color: selectedOption ? '#fff' : '#6b7280', border: 'none', borderRadius: '99px', padding: '8px 20px', fontFamily: 'DM Sans,sans-serif', fontSize: '.84rem', fontWeight: 700, cursor: selectedOption ? 'pointer' : 'not-allowed' }}>
                   {selectedOption ? `Apply Option ${selectedOption}` : 'Apply Selected Option'}
                 </button>
               </div>
+
             </div>
           </div>
         </div>
       )}
 
-      {/* Create/Edit Goal Modal */}
+      {/* ── Create/Edit Goal Modal ── */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: 'white', borderRadius: '22px', padding: '32px', maxWidth: '560px', width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(59,110,255,.18)' }}>
@@ -221,7 +385,7 @@ const GoalsPage = ({ user }) => {
                 </div>
               ))}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {[['Target Amount', 'target', 'RM50,000'], ['Current Savings', 'savings', 'RM0']].map(([label, key, ph]) => (
+                {[['Target Amount', 'target', 'e.g. 50000'], ['Current Savings', 'savings', 'e.g. 5000']].map(([label, key, ph]) => (
                   <div key={key} className="modal-field">
                     <label className="modal-label">{label}</label>
                     <input className="modal-input-field" value={formData[key]} onChange={e => setFormData({ ...formData, [key]: e.target.value })} placeholder={ph} />
@@ -229,8 +393,13 @@ const GoalsPage = ({ user }) => {
                 ))}
               </div>
               <div className="modal-field">
-                <label className="modal-label">Monthly Distribution</label>
-                <input className="modal-input-field" value={formData.monthly} onChange={e => setFormData({ ...formData, monthly: e.target.value })} placeholder="RM500" />
+                <label className="modal-label">Monthly Contribution</label>
+                <input
+                  className="modal-input-field"
+                  value={formData.monthly}
+                  onChange={e => setFormData({ ...formData, monthly: e.target.value })}
+                  placeholder="e.g. 500"
+                />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div className="modal-field">
