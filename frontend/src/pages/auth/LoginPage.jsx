@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiRequest, getStoredUser, isValidEmail, setStoredUser } from '../../utils/session'
+import { getStoredUser, isValidEmail, loginUser } from '../../utils/session'
 import './LoginPage.css'
 
 // LOGIN PAGE
@@ -20,8 +20,7 @@ const LoginPage = () => {
     if (!formData.password)            { setError('Please enter your password.');          return; }
     setLoading(true);
     try {
-      const user = await apiRequest('/api/auth/login', { method: 'POST', body: JSON.stringify({ email: formData.email, password: formData.password }) });
-      setStoredUser(user, formData.rememberMe);
+      loginUser({ name: formData.email.split('@')[0] || 'Demo Investor', email: formData.email, rememberMe: formData.rememberMe });
       navigate('/');
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');

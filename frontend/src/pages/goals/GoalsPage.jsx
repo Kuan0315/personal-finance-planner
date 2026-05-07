@@ -4,17 +4,26 @@ import { MOCK_GOALS } from '../../data/mockGoals'
 import { GOAL_FILTERS, GOAL_STATUS_LABELS, GOAL_STATUS } from '../../constants/goalStatus'
 import './GoalsPage.css'
 
+const PORTFOLIO_ASSIGNMENTS_KEY = 'pfp_goal_portfolios'
+const loadGoals = () => {
+  const savedAssignments = JSON.parse(localStorage.getItem(PORTFOLIO_ASSIGNMENTS_KEY)) || {}
+  return MOCK_GOALS.map(goal => ({ ...goal, assignedPortfolio: savedAssignments[goal.id] || null }))
+}
+
 // GOALS PAGE
 // ═══════════════════════════════════════════════════════
 const GoalsPage = ({ user }) => {
   const navigate = useNavigate();
-  const [goals, setGoals] = useState(MOCK_GOALS);
+  const [goals, setGoals] = useState(loadGoals);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
   const [showAIModal, setShowAIModal] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [showGoalDetailModal, setShowGoalDetailModal] = useState(false);
+  const [selectedGoalDetail, setSelectedGoalDetail] = useState(null);
+  const [detailTab, setDetailTab] = useState('goal');
   const [formData, setFormData] = useState({ icon: '🏠', name: '', desc: '', target: '', savings: '', monthly: '', dateLabel: '' });
 
   useEffect(() => { if (!user?.email) navigate('/login'); }, [user, navigate]);
@@ -29,16 +38,23 @@ const GoalsPage = ({ user }) => {
     e.preventDefault();
     if (!formData.name) { alert('Please enter a goal name.'); return; }
     if (editingGoal) {
-      setGoals(goals.map(g => g.id === editingGoal.id ? { ...editingGoal, ...formData } : g));
+      setGoals(goals.map(g => g.id === editingGoal.id ? { ...editingGoal, ...formData, assignedPortfolio: g.assignedPortfolio || null } : g));
       setEditingGoal(null);
     } else {
-      setGoals([...goals, { id: Math.max(...goals.map(g => g.id), 0) + 1, ...formData, status: GOAL_STATUS.ON_TRACK, progressPercent: 0 }]);
+      setGoals([...goals, { id: Math.max(...goals.map(g => g.id), 0) + 1, ...formData, status: GOAL_STATUS.ON_TRACK, progressPercent: 0, assignedPortfolio: null }]);
     }
     setShowModal(false);
     setFormData({ icon: '🏠', name: '', desc: '', target: '', savings: '', monthly: '', dateLabel: '' });
   };
 
-  const handleDeleteGoal = (id) => { if (window.confirm('Delete this goal?')) setGoals(goals.filter(g => g.id !== id)); };
+  const handleDeleteGoal = (id) => {
+    if (window.confirm('Delete this goal?')) {
+      setGoals(goals.filter(g => g.id !== id));
+      const current = JSON.parse(localStorage.getItem(PORTFOLIO_ASSIGNMENTS_KEY)) || {}
+      delete current[id]
+      localStorage.setItem(PORTFOLIO_ASSIGNMENTS_KEY, JSON.stringify(current))
+    }
+  };
   const handleEditGoal = (goal) => { setEditingGoal(goal); setFormData(goal); setShowModal(true); };
   const openAdd = () => { setEditingGoal(null); setFormData({ icon: '🏠', name: '', desc: '', target: '', savings: '', monthly: '', dateLabel: '' }); setShowModal(true); };
 
@@ -106,12 +122,13 @@ const GoalsPage = ({ user }) => {
               </span>
             </div>
             <h5 className="goal-title">{goal.name}</h5>
-            <p className="goal-desc">{goal.desc || 'No description provided.'}</p>
             <div className="progress goal-progress"><div className="progress-bar" style={{ width: `${goal.progressPercent}%` }}></div></div>
-            <p className="goal-amounts"><strong>{goal.savings}</strong> <span>/ {goal.target}</span></p>
+            <div className="goal-summary-row">
+              <p className="goal-amounts"><strong>{goal.savings}</strong> <span>/ {goal.target} · {goal.progressPercent}%</span></p>
+              {goal.assignedPortfolio && <span className="portfolio-badge-small">Portfolio Applied</span>}
+            </div>
             <div className="goal-meta">
               <div className="meta-row">
-                <span><i className="bi bi-calendar3"></i> {goal.status === 'completed' ? 'Completed:' : 'Target:'} {goal.dateLabel}</span>
                 <div className="goal-actions">
                   {goal.hasAI && (
                     <button className="action-btn" title="AI Advisory" onClick={() => { setSelectedOption(null); setShowAIModal(true); }} style={{ color: '#6366f1' }}>
@@ -122,7 +139,7 @@ const GoalsPage = ({ user }) => {
                   <button className="action-btn delete-btn" onClick={() => handleDeleteGoal(goal.id)}><i className="bi bi-trash3"></i></button>
                 </div>
               </div>
-              <span className="meta-monthly"><i className="bi bi-coin"></i> {goal.monthly} / month</span>
+              <button className="view-details-btn" onClick={() => { setSelectedGoalDetail(goal); setDetailTab('goal'); setShowGoalDetailModal(true); }}>View Details</button>
             </div>
           </div>
         ))}
@@ -136,6 +153,62 @@ const GoalsPage = ({ user }) => {
           </div>
         </div>
       </div>
+
+      {/* Goal Details Modal */}
+      {showGoalDetailModal && selectedGoalDetail && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1060 }}
+          onClick={e => { if (e.target === e.currentTarget) setShowGoalDetailModal(false); }}>
+          <div style={{ background: 'white', borderRadius: '22px', padding: '28px 26px', width: '92%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,.18)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '18px' }}>
+              <div>
+                <p className="modal-main-sub" style={{ marginBottom: '6px' }}>Goal Overview</p>
+                <h3 style={{ margin: 0, fontFamily: 'Sora, sans-serif', fontSize: '1.35rem', fontWeight: 700 }}>{selectedGoalDetail.name}</h3>
+                <p style={{ margin: '8px 0 0', color: '#6b7280', fontSize: '.9rem' }}>{GOAL_STATUS_LABELS[selectedGoalDetail.status]}</p>
+              </div>
+              <button className="view-details-btn" style={{ minWidth: 'auto', padding: '8px 16px' }} onClick={() => setShowGoalDetailModal(false)}>Close</button>
+            </div>
+            <div className="detail-tabs">
+              <button className={`detail-tab ${detailTab === 'goal' ? 'active' : ''}`} onClick={() => setDetailTab('goal')}>Goal Details</button>
+              <button className={`detail-tab ${detailTab === 'portfolio' ? 'active' : ''}`} onClick={() => setDetailTab('portfolio')}>Portfolio Details</button>
+            </div>
+            {detailTab === 'goal' ? (
+              <div style={{ display: 'grid', gap: '16px', marginTop: '18px' }}>
+                <div className="detail-card">
+                  <p className="detail-label">Description</p>
+                  <p className="detail-text">{selectedGoalDetail.desc || 'No description provided.'}</p>
+                </div>
+                <div className="detail-row"><span>Target Amount</span><strong>{selectedGoalDetail.target}</strong></div>
+                <div className="detail-row"><span>Target Date</span><strong>{selectedGoalDetail.dateLabel}</strong></div>
+                <div className="detail-row"><span>Current Savings</span><strong>{selectedGoalDetail.savings}</strong></div>
+                <div className="detail-row"><span>Monthly Savings</span><strong>{selectedGoalDetail.monthly}</strong></div>
+                <div className="detail-row"><span>Goal Status</span><strong>{GOAL_STATUS_LABELS[selectedGoalDetail.status]}</strong></div>
+                <div className="detail-row"><span>Progress</span><strong>{selectedGoalDetail.progressPercent}%</strong></div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '16px', marginTop: '18px' }}>
+                {selectedGoalDetail.assignedPortfolio ? (
+                  <>
+                    <div className="detail-card">
+                      <p className="detail-label">Assigned Portfolio</p>
+                      <h4 className="detail-title">{selectedGoalDetail.assignedPortfolio.name}</h4>
+                    </div>
+                    <div className="detail-row"><span>Risk Level</span><strong>{selectedGoalDetail.assignedPortfolio.riskLevel}</strong></div>
+                    <div className="detail-row"><span>Asset Allocation</span><strong>{selectedGoalDetail.assignedPortfolio.allocation.map(item => `${item.pct}% ${item.label}`).join(', ')}</strong></div>
+                    <div className="detail-row"><span>Recommended Instruments</span><strong>{selectedGoalDetail.assignedPortfolio.instruments.join(', ')}</strong></div>
+                    {selectedGoalDetail.assignedPortfolio.expectedReturn && (
+                      <div className="detail-row"><span>Expected Annual Return</span><strong>{selectedGoalDetail.assignedPortfolio.expectedReturn}</strong></div>
+                    )}
+                  </>
+                ) : (
+                  <div className="detail-card">
+                    <p className="detail-text">This goal does not have an assigned portfolio yet. Apply one from the Investments page to view the recommended strategy here.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* AI Advisory Modal */}
       {showAIModal && (
@@ -264,7 +337,5 @@ const GoalsPage = ({ user }) => {
     </div>
   );
 };
-
-// ═══════════════════════════════════════════════════════
 
 export default GoalsPage

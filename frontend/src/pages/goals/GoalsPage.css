@@ -119,13 +119,172 @@
     border-radius: 99px;
 }
 
+.goal-portfolio {
+    background: #f8fbff;
+    border: 1px solid #d8e4ff;
+    border-radius: 16px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+
+.portfolio-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.portfolio-label {
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    color: #1f2937;
+}
+
+.portfolio-badge {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #155e75;
+    background: #d1e8ff;
+    border-radius: 999px;
+    padding: 4px 10px;
+}
+
+.portfolio-name {
+    font-size: .88rem;
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: #0f172a;
+}
+
+.portfolio-detail {
+    font-size: .78rem;
+    color: #334155;
+    line-height: 1.5;
+    margin: 2px 0;
+}
+
 .goal-amounts {
     font-size: .83rem;
-    margin-bottom: 12px;
+    margin-bottom: 0;
 }
 
 .goal-amounts strong {
     font-weight: 700;
+}
+
+.goal-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.portfolio-badge-small {
+    font-size: .72rem;
+    font-weight: 700;
+    color: #0f5132;
+    background: #d1e7dd;
+    border-radius: 999px;
+    padding: 4px 10px;
+    white-space: nowrap;
+}
+
+.view-details-btn {
+    background: #eef2ff;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #3730a3;
+    font-size: .78rem;
+    font-weight: 700;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background var(--T), border-color var(--T), color var(--T);
+}
+
+.view-details-btn:hover {
+    background: #e0e7ff;
+    border-color: #c7d2fe;
+}
+
+.detail-tabs {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 18px;
+}
+
+.detail-tab {
+    background: transparent;
+    border: none;
+    padding: 10px 16px;
+    font-size: .88rem;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    border-radius: 999px;
+    transition: background var(--T), color var(--T);
+}
+
+.detail-tab.active {
+    background: #eef2ff;
+    color: #1d4ed8;
+}
+
+.detail-card {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    padding: 18px 20px;
+}
+
+.detail-label {
+    font-size: .8rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 6px;
+}
+
+.detail-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.detail-text {
+    margin: 0;
+    color: #334155;
+    line-height: 1.7;
+    font-size: .92rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: .92rem;
+    color: #334155;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-row span {
+    color: #64748b;
+}
+
+.detail-row strong {
+    font-weight: 700;
+    color: #0f172a;
 }
 
 .goal-amounts span {

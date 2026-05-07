@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { INVESTMENT_RISK_PROFILES, RISK_PROFILE_KEYS } from '../../data/investmentRiskProfiles'
 import './InvestmentsPage.css'
 
+const PORTFOLIO_ASSIGNMENTS_KEY = 'pfp_goal_portfolios'
+const savePortfolioAssignment = (goalId, portfolio) => {
+  const current = JSON.parse(localStorage.getItem(PORTFOLIO_ASSIGNMENTS_KEY)) || {}
+  localStorage.setItem(PORTFOLIO_ASSIGNMENTS_KEY, JSON.stringify({ ...current, [goalId]: portfolio }))
+}
+
 // INVESTMENTS PAGE
 // ═══════════════════════════════════════════════════════
 const InvestmentsPage = ({ user }) => {
@@ -15,11 +21,11 @@ const InvestmentsPage = ({ user }) => {
   useEffect(() => { if (!user?.email) navigate('/login'); }, [user, navigate]);
 
   const GOALS_LIST = [
-    { id: 'goal-1', name: 'Dream Home Down Payment', saved: 88400, target: 130000, status: 'on-track' },
-    { id: 'goal-2', name: 'Personal Savings Fund', saved: 44000, target: 100000, status: 'on-track' },
-    { id: 'goal-3', name: 'Emergency Fund', saved: 16500, target: 30000, status: 'at-risk' },
-    { id: 'goal-4', name: 'Travel Fund', saved: 16400, target: 20000, status: 'on-track' },
-    { id: 'goal-5', name: 'Early Retirement Fund', saved: 210000, target: 1000000, status: 'high-risk' },
+    { id: 1, name: 'Dream Home Down Payment', saved: 88400, target: 130000, status: 'on-track' },
+    { id: 2, name: 'Personal Savings Fund', saved: 44000, target: 100000, status: 'on-track' },
+    { id: 3, name: 'Emergency Fund', saved: 16500, target: 30000, status: 'at-risk' },
+    { id: 4, name: 'Travel Fund', saved: 16400, target: 20000, status: 'on-track' },
+    { id: 5, name: 'Early Retirement Fund', saved: 210000, target: 1000000, status: 'high-risk' },
   ];
 
   const riskData = INVESTMENT_RISK_PROFILES[selectedRisk];
@@ -132,7 +138,20 @@ const InvestmentsPage = ({ user }) => {
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
               <button className="btn-modal-cancel" onClick={() => { setShowConfirmModal(false); setShowGoalModal(true); }}>Back</button>
-              <button className="btn-modal-save" onClick={() => { alert('Portfolio applied successfully!'); setShowConfirmModal(false); setSelectedGoal(null); }}>Confirm</button>
+              <button className="btn-modal-save" onClick={() => {
+                if (selectedGoal) {
+                  savePortfolioAssignment(selectedGoal.id, {
+                    name: riskData.title,
+                    riskLevel: selectedRisk.charAt(0).toUpperCase() + selectedRisk.slice(1),
+                    allocation: riskData.allocation,
+                    instruments: riskData.instruments,
+                    expectedReturn: riskData.returnVal,
+                  })
+                }
+                alert('Portfolio applied successfully!');
+                setShowConfirmModal(false);
+                setSelectedGoal(null);
+              }}>Confirm</button>
             </div>
           </div>
         </div>
@@ -141,6 +160,5 @@ const InvestmentsPage = ({ user }) => {
   );
 };
 
-// ═══════════════════════════════════════════════════════
 
 export default InvestmentsPage

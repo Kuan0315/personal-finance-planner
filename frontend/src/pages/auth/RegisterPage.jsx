@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiRequest, getStoredUser, isStrongPassword, isValidEmail } from '../../utils/session'
+import { getStoredUser, isStrongPassword, isValidEmail, loginUser, registerUser } from '../../utils/session'
 import './AuthShared.css'
 
-// REGISTER PAGE
-// ═══════════════════════════════════════════════════════
 const RegisterPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '', agreeTerms: false });
@@ -23,10 +21,9 @@ const RegisterPage = () => {
     if (!formData.agreeTerms)                        { setError('You must agree to the terms.');                                         return; }
     setLoading(true);
     try {
-      await apiRequest('/api/auth/register', { method: 'POST', body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password }) });
-      alert('Registration successful. You can sign in now.');
-      navigate('/login');
-    } catch (err) {
+      registerUser({ name: formData.name, email: formData.email });
+      loginUser({ name: formData.name, email: formData.email, rememberMe: true });
+      navigate('/');
       setError(err.message || 'Registration failed. Please try again.');
     } finally { setLoading(false); }
   };
@@ -56,7 +53,5 @@ const RegisterPage = () => {
     </div>
   );
 };
-
-// ═══════════════════════════════════════════════════════
 
 export default RegisterPage
