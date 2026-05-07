@@ -183,10 +183,11 @@ const RoiPage = ({ user }) => {
 
     setSaving(true)
     try {
-      const saved = createMockHistoryItem(payload)
-      const next = [saved, ...history]
-      setHistory(next)
-      saveMockHistory(next)
+      setHistory((prev) => {
+        const next = [payload, ...prev]
+        saveMockHistory(next)
+        return next
+      })
     } catch (err) {
       console.error('Failed to save history', err)
     } finally {
@@ -511,7 +512,7 @@ const RoiPage = ({ user }) => {
                     )}
                     <div className="history-main">
                       <div className="history-topline">
-                        <div className="history-title">{(item.mode || '').toUpperCase()} · {item.years} yr</div>
+                        <div className="history-title">{(item.mode || '').toUpperCase()} · {item.durationInYears ?? item.years ?? item.duration ?? 0} yr</div>
                         <div className="history-badge">{item.gainPercentage || item.gain || 0}% gain</div>
                       </div>
                       <div className="history-date">{new Date(item.createdAt || item._id || Date.now()).toLocaleString()}</div>

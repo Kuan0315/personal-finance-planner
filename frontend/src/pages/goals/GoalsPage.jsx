@@ -10,8 +10,6 @@ const loadGoals = () => {
   return MOCK_GOALS.map(goal => ({ ...goal, assignedPortfolio: savedAssignments[goal.id] || null }))
 }
 
-// GOALS PAGE
-// ═══════════════════════════════════════════════════════
 const GoalsPage = ({ user }) => {
   const navigate = useNavigate();
   const [goals, setGoals] = useState(loadGoals);

@@ -9,8 +9,6 @@ const savePortfolioAssignment = (goalId, portfolio) => {
   localStorage.setItem(PORTFOLIO_ASSIGNMENTS_KEY, JSON.stringify({ ...current, [goalId]: portfolio }))
 }
 
-// INVESTMENTS PAGE
-// ═══════════════════════════════════════════════════════
 const InvestmentsPage = ({ user }) => {
   const navigate = useNavigate();
   const [selectedRisk, setSelectedRisk] = useState('conservative');
