@@ -1,10 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { apiRequest, isValidEmail } from '../../utils/session'
+import { isValidEmail } from '../../utils/session'
 import './AuthShared.css'
 
-// FORGOT PASSWORD PAGE
-// ═══════════════════════════════════════════════════════
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -17,8 +14,7 @@ const ForgotPasswordPage = () => {
     if (!isValidEmail(email)) { setError('Please enter a valid email address.'); return; }
     setLoading(true);
     try {
-      const data = await apiRequest('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
-      setSuccess(data?.message || 'Reset link sent to your email.');
+      setSuccess('Reset link sent to your email.');
       setEmail('');
     } catch (err) {
       setError(err.message || 'Failed to send reset link.');
@@ -42,7 +38,5 @@ const ForgotPasswordPage = () => {
     </div>
   );
 };
-
-// ═══════════════════════════════════════════════════════
 
 export default ForgotPasswordPage

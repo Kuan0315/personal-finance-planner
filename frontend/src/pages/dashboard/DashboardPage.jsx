@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Chart from 'chart.js/auto'
+import { MOCK_MARKET_INSIGHTS } from '../../data/mockMarketInsights'
 import './DashboardPage.css'
 
-// DASHBOARD PAGE
-// ═══════════════════════════════════════════════════════
 const DashboardPage = ({ user }) => {
   const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState({
@@ -46,10 +45,9 @@ const DashboardPage = ({ user }) => {
   const loadInsights = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/market-insights');
-      if (!res.ok) throw new Error('Failed to fetch market insights');
-      const payload = await res.json();
-      const data = payload.data ?? payload;
+      // Simulate API delay for local demo data
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const data = MOCK_MARKET_INSIGHTS;
       setDashboardData({
         trend: data.trend ?? '—',
         sp500: data.sp500 ?? data.performance ?? '—',
@@ -69,10 +67,10 @@ const DashboardPage = ({ user }) => {
           vix: data.globalView?.vix ?? '20.00',
           riskLevel: data.globalView?.riskLevel ?? 'Moderate',
           lastUpdated: data.globalView?.lastUpdated ?? null,
-          dataSource: data.globalView?.dataSource ?? data.dataSource ?? payload.source ?? 'fallback',
+          dataSource: data.globalView?.dataSource ?? data.dataSource ?? 'mock',
         },
         recommendations: Array.isArray(data.recommendations) ? data.recommendations : [],
-        dataSource: data.dataSource ?? payload.source ?? 'live',
+        dataSource: data.dataSource ?? 'mock',
         topStock: data.summary?.topStock ?? data.topStock ?? { symbol: 'N/A', company: 'No data', percentChange: 0, change: 0 },
         isNewUpdate: !!data.isNewUpdate,
         updatedFields: Array.isArray(data.updatedFields) ? data.updatedFields : [],
@@ -329,7 +327,7 @@ const DashboardPage = ({ user }) => {
               rel="noopener noreferrer"
               style={{ display: 'flex', textDecoration: 'none', color: 'inherit' }}
             >
-              <div className={`news-thumb news-thumb--${(i % 3) + 1}`}></div>
+              <div className={`news-thumb news-thumb--${(i % 3) + 1}`} style={n.photo ? { backgroundImage: `url(${n.photo})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}></div>
               <div className="news-content">
                 <h3 className="news-title">{n.title ?? 'Market update'}</h3>
                 <div className="news-meta">
@@ -393,7 +391,5 @@ const DashboardPage = ({ user }) => {
     </div>
   );
 };
-
-// ═══════════════════════════════════════════════════════
 
 export default DashboardPage

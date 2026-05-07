@@ -1,5 +1,3 @@
-export const API_BASE = import.meta.env.VITE_API_BASE || ''
-
 export const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 export const isStrongPassword = (password) => /^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password)
 
@@ -27,25 +25,32 @@ export const clearStoredUser = () => {
   sessionStorage.removeItem('user')
 }
 
-export const apiRequest = async (path, options = {}) => {
-  const user = getStoredUser();
-  const token = user?.token;
-  const config = {
-    ...options,
-    headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { 'Authorization': `Bearer ${token}`} : {}),
-      ...(options.headers || {}),
-    },
+export const loginUser = ({ name = 'Demo Investor', email, rememberMe = true }) => {
+  const user = {
+    id: `user-${Date.now()}`,
+    name: name || 'Demo Investor',
+    email,
   }
 
-  const response = await fetch(`${API_BASE}${path}`, config)
-  const contentType = response.headers.get('content-type') || ''
-  const data = contentType.includes('application/json') ? await response.json() : null
+  setStoredUser(user, rememberMe)
+  return user
+}
 
-  if (!response.ok) {
-    throw new Error(data?.message || 'Request failed.')
-  }
+export const registerUser = ({ name, email }) => ({
+  id: `user-${Date.now()}`,
+  name,
+  email,
+})
 
-  return data
+export const updateStoredUser = (updates) => {
+  const currentUser = getStoredUser()
+  if (!currentUser) return null
+
+  const updatedUser = { ...currentUser, ...updates }
+  setStoredUser(updatedUser, Boolean(localStorage.getItem('user')))
+  return updatedUser
+}
+
+export const deleteStoredUser = () => {
+  clearStoredUser()
 }

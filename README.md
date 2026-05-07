@@ -24,18 +24,7 @@ The Personal Financial Planning System empowers users to:
 - **UI Framework:** Bootstrap 5.3.3 (via CDN)
 - **Icons:** Bootstrap Icons 1.11.3
 - **Linting:** ESLint 9.39.4
-
-### Backend
-- **Runtime:** Node.js
-- **Framework:** Express.js
-- **Database:** MongoDB
-- **Authentication:** JWT (JSON Web Tokens)
-- **Password Hashing:** bcrypt
-- **Environment Management:** dotenv
-
-### External APIs
-- Financial news and market data APIs
-- Email/OTP services for password recovery
+- **Data:** Local mock data and browser storage
 
 ---
 
@@ -44,7 +33,7 @@ The Personal Financial Planning System empowers users to:
 ### 1. User Management
 - ✅ User Registration with validation
 - ✅ Secure Login/Logout
-- ✅ Password Recovery (Email/OTP)
+- ✅ Password Recovery using local mock responses
 - ✅ Session Management
 - ✅ Input Validation & Security
 
@@ -68,8 +57,8 @@ The Personal Financial Planning System empowers users to:
 - ✅ Goal-Based Matching
 
 ### 5. Market Insights Dashboard
-- ✅ Real-time Market Trends
-- ✅ API-driven Summary & Indicators
+- ✅ Mock Market Trends
+- ✅ Local Summary & Indicators
 - ✅ Financial News Display
 - ✅ Market Data Visualization (Charts)
 - ✅ Action Recommendations
@@ -88,7 +77,6 @@ The Personal Financial Planning System empowers users to:
 ### Prerequisites
 - Node.js 18+ installed
 - npm or yarn package manager
-- MongoDB Atlas account (or local MongoDB)
 - Git
 
 ### Step 1: Clone Repository
@@ -119,13 +107,6 @@ npm install
 
 ## 📖 How to Run
 
-### Run Backend Server
-```bash
-cd backend
-npm run dev
-# Server starts on http://localhost:3001
-```
-
 ### Run Frontend Development Server
 ```bash
 cd frontend
@@ -149,12 +130,6 @@ npm run preview  # Preview production build
 npm run lint     # Run ESLint
 ```
 
-**Backend:**
-```bash
-npm run dev      # Start server with nodemon
-npm run start    # Start production server
-```
-
 ---
 
 ## 💻 System Requirements
@@ -163,7 +138,7 @@ npm run start    # Start production server
 - **Browser:** Chrome, Firefox, Edge, Safari (latest versions)
 - **Memory:** 2GB RAM
 - **Storage:** 500MB disk space
-- **Internet:** Required for API calls and real-time data
+- **Internet:** Not required for core app flows
 
 ### Supported Devices
 - Desktop computers
@@ -175,11 +150,10 @@ npm run start    # Start production server
 ## ✅ Quality Requirements
 
 ### Security
-- Passwords encrypted using bcrypt
-- JWT-based authentication
-- Protected API endpoints
-- HTTPS communication
-- SQL Injection & XSS protection
+- Session-based local authentication
+- Protected frontend routes
+- Input validation
+- XSS-safe React rendering
 
 ### Performance
 - User registration/login: < 2 seconds
@@ -191,9 +165,9 @@ npm run start    # Start production server
 
 ### Reliability
 - Zero-crash normal operation
-- Persistent data storage
+- Persistent browser storage for mock users
 - Consistent calculation results
-- Graceful API failure handling
+- Graceful mock request handling
 - Reliable password recovery
 
 ### Data Accuracy
@@ -201,7 +175,7 @@ npm run start    # Start production server
 - Correct risk profiling
 - Aligned investment recommendations
 - Immediate data reflection
-- Reliable external API data
+- Deterministic mock market data
 
 ---
 
@@ -218,9 +192,7 @@ API_KEY=your_external_api_key
 ```
 
 ### Frontend (.env)
-```
-VITE_API_BASE_URL=http://localhost:3001/api
-```
+No environment variables are required for the mock-data setup.
 
 ---
 
@@ -237,14 +209,9 @@ taskkill /PID <PID> /F
 lsof -ti:3001 | xargs kill -9
 ```
 
-**Issue:** MongoDB connection fails
-- Verify MongoDB URI in .env file
-- Check MongoDB Atlas IP whitelist
-- Ensure internet connectivity
-
-**Issue:** CORS errors
-- Verify FRONTEND_URL in backend .env
-- Check backend CORS configuration
+**Issue:** Need to reset the mock users
+- Clear `localStorage` and `sessionStorage` in the browser
+- Or remove the `finance-planner-mock-users` key from local storage
 
 ---
 
