@@ -168,9 +168,17 @@ const RoiPage = ({ user }) => {
 
     setSaving(true)
     try {
+<<<<<<< HEAD
       const res = await apiRequest('/api/roi/history', { method: 'POST', body: JSON.stringify(payload) })
       const saved = res && res._id ? res : null
       if (saved) setHistory([saved, ...history])
+=======
+      setHistory((prev) => {
+        const next = [payload, ...prev]
+        saveMockHistory(next)
+        return next
+      })
+>>>>>>> f63661a419faea1dd7eaa58eebdd193987fd6e26
     } catch (err) {
       console.error('Failed to save history', err)
     } finally {
@@ -495,7 +503,7 @@ const RoiPage = ({ user }) => {
                     )}
                     <div className="history-main">
                       <div className="history-topline">
-                        <div className="history-title">{(item.mode || '').toUpperCase()} · {item.years} yr</div>
+                        <div className="history-title">{(item.mode || '').toUpperCase()} · {item.durationInYears ?? item.years ?? item.duration ?? 0} yr</div>
                         <div className="history-badge">{item.gainPercentage || item.gain || 0}% gain</div>
                       </div>
                       <div className="history-date">{new Date(item.createdAt || item._id || Date.now()).toLocaleString()}</div>

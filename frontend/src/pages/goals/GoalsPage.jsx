@@ -16,7 +16,16 @@ import { formatRM } from '../../utils/financialUtils'
 import { formatRemainingTime } from '../../utils/dateUtils'
 import './GoalsPage.css'
 
+<<<<<<< HEAD
 // ─── GoalsPage ────────────────────────────────────────────────────────────────
+=======
+const PORTFOLIO_ASSIGNMENTS_KEY = 'pfp_goal_portfolios'
+const loadGoals = () => {
+  const savedAssignments = JSON.parse(localStorage.getItem(PORTFOLIO_ASSIGNMENTS_KEY)) || {}
+  return MOCK_GOALS.map(goal => ({ ...goal, assignedPortfolio: savedAssignments[goal.id] || null }))
+}
+
+>>>>>>> f63661a419faea1dd7eaa58eebdd193987fd6e26
 const GoalsPage = ({ user }) => {
   const navigate = useNavigate()
 
