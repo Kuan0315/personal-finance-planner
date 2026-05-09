@@ -14,11 +14,11 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!formData.name)                              { setError('Please enter your full name.');                                          return; }
-    if (!isValidEmail(formData.email))               { setError('Please enter a valid email address.');                                  return; }
-    if (!isStrongPassword(formData.password))        { setError('Password must be at least 8 characters and include a letter and a number.'); return; }
-    if (formData.password !== formData.confirmPassword) { setError('Passwords do not match.');                                           return; }
-    if (!formData.agreeTerms)                        { setError('You must agree to the terms.');                                         return; }
+    if (!formData.name) { setError('Please enter your full name.'); return; }
+    if (!isValidEmail(formData.email)) { setError('Please enter a valid email address.'); return; }
+    if (!isStrongPassword(formData.password)) { setError('Password must be at least 8 characters and include a letter and a number.'); return; }
+    if (formData.password !== formData.confirmPassword) { setError('Passwords do not match.'); return; }
+    if (!formData.agreeTerms) { setError('You must agree to the terms.'); return; }
     setLoading(true);
     try {
       registerUser({ name: formData.name, email: formData.email });
@@ -32,7 +32,7 @@ const RegisterPage = () => {
   return (
     <div className="auth-page">
       <div className="page-title-section">
-        <h1>Welcome to WealthTrack</h1>
+        <h1>Join WealthTrack</h1>
       </div>
       <div className="auth-container">
         <div className="auth-card">
