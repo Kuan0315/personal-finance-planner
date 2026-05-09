@@ -5,11 +5,25 @@
 
 .auth-page {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #e8eeff, #eef1f8);
   padding: 24px;
+}
+
+.page-title-section {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.page-title-section h1 {
+  font-family: var(--font-h);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0;
 }
 
 .auth-container {

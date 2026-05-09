@@ -29,6 +29,9 @@ const LoginPage = () => {
 
   return (
     <div className="auth-page">
+      <div className="page-title-section">
+        <h1>Welcome to WealthTrack</h1>
+      </div>
       <div className="auth-container">
         <div className="auth-card">
           <div className="auth-header">
