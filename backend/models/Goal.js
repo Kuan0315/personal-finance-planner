@@ -31,7 +31,7 @@ const goalSchema = new mongoose.Schema(
     savings: { type: Number, default: 0, min: 0 },
     monthly: { type: Number, default: 0, min: 0 },
     // stored as "YYYY-MM" string, e.g. "2027-06"
-    dateLabel: { type: String, default: '' },
+    dateLabel: {type: String, default: '', match: /^\d{4}-\d{2}$/},
     assignedPortfolio: { type: portfolioSchema, default: null },
   },
   { timestamps: true }

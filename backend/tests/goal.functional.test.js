@@ -17,7 +17,7 @@ beforeAll(async () => {
 
   mongod = await MongoMemoryServer.create();
   const uri = mongod.getUri();
-  await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+  await mongoose.connect(uri);
 
   app = express();
   app.use(bodyParser.json());

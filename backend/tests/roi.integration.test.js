@@ -24,7 +24,7 @@ beforeAll(async () => {
     } else {
         mongod = await MongoMemoryServer.create();
         const uri = mongod.getUri();
-        await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+        await mongoose.connect(uri);
     }
 
     // build express app with real routes + middleware
