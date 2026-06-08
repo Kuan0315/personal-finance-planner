@@ -11,6 +11,14 @@ app.get('/api/market/insights', getMarketInsights);
 
 describe('Market Dashboard Functional Testing', () => {
 
+  beforeEach(() => {
+    jest.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    console.info.mockRestore();
+  });
+
   // =========================
   // FT-26 API Status Test
   // =========================

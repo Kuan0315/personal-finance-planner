@@ -1,8 +1,27 @@
 const request = require('supertest');
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+const bcrypt = require('bcryptjs');
 const app = require('../server');
 
 const User = require('../models/User');
-const createTestJWT = require('../utils/createTestJWT');
+const { createTestJWT } = require('./helpers/jwtHelper');
+
+let mongod;
+
+beforeAll(async () => {
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'testsecret';
+
+  mongod = await MongoMemoryServer.create();
+  await mongoose.connect(mongod.getUri());
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  if (mongod) {
+    await mongod.stop();
+  }
+});
 
 describe('Profile Management - Functional Tests', () => {
 
@@ -35,7 +54,7 @@ describe('Profile Management - Functional Tests', () => {
   });
 
   // FT-14 · Change Password Wrong Old Password
-  test('FT-14: PUT /api/users/change-password rejects invalid password', async () => {
+  test('FT-14: POST /api/auth/change-password rejects invalid current password', async () => {
     const user = await User.create({
       name: 'User',
       email: 'wrong@test.com',
@@ -45,14 +64,20 @@ describe('Profile Management - Functional Tests', () => {
     const token = createTestJWT(user._id);
 
     const res = await request(app)
-      .put('/api/users/change-password')
+      .post('/api/auth/change-password')
       .set('Authorization', `Bearer ${token}`)
       .send({
-        oldPassword: 'wrongpass',
+        currentPassword: 'wrongpass',
         newPassword: 'newpass123'
       });
 
-    expect([400, 401]).toContain(res.status);
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('message', 'Current password is incorrect');
+
+    const updatedUser = await User.findById(user._id);
+    const isStillOldPassword = await bcrypt.compare('123456', updatedUser.password);
+
+    expect(isStillOldPassword).toBe(true);
   });
 
   // FT-15 · Delete Account Without Auth

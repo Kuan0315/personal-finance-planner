@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const getFallbackMarketInsights = () => ({
   dataSource: 'fallback',
   summary: {

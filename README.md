@@ -95,6 +95,8 @@ echo "MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database?r
 echo "JWT_SECRET=your_jwt_secret_key" >> .env
 echo "PORT=3001" >> .env
 echo "FRONTEND_URL=http://localhost:5173" >> .env
+echo "SMTP_EMAIL=your_test_email_for_the_system" >> .env
+echo "SMTP_PASSWORD=your_smtp_password" >> .env
 ```
 
 ### Step 3: Setup Frontend
@@ -188,6 +190,8 @@ JWT_SECRET=your_secret_key_here
 PORT=3001
 FRONTEND_URL=http://localhost:5173
 NODE_ENV=development
+SMTP_EMAIL=sample@gmail.com
+SMTP_PASSWORD="your_smtp_password"
 API_KEY=your_external_api_key
 ```
 
