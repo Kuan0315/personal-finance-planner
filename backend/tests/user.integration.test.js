@@ -198,8 +198,8 @@ describe('User Profile Management - Integration Tests', () => {
     expect(res.status).toBe(401);
   });
 
-  // IT-11 · Get Profile – All Fields Returned
-  test('IT-11: GET /api/users/profile returns all profile fields when fully populated', async () => {
+  // IT-41 · Get Profile – All Fields Returned
+  test('IT-41: GET /api/users/profile returns all profile fields when fully populated', async () => {
     const user = await User.create({
       name: 'Grace',
       email: 'grace@test.com',
@@ -231,8 +231,8 @@ describe('User Profile Management - Integration Tests', () => {
     expect(res.body).not.toHaveProperty('password');
   });
 
-  // IT-12 · Update Profile – Email Update
-  test('IT-12: PUT /api/users/profile allows updating the email address', async () => {
+  // IT-42 · Update Profile – Email Update
+  test('IT-42: PUT /api/users/profile allows updating the email address', async () => {
     const user = await User.create({
       name: 'Hank',
       email: 'hank@test.com',
