@@ -1,5 +1,8 @@
 require('dotenv').config();
 
+// Force Node.js DNS resolution through public resolvers for SRV lookups (MongoDB Atlas).
+require('node:dns/promises').setServers(['1.1.1.1', '8.8.8.8']);
+
 const express = require('express');
 const cors = require('cors');
 
@@ -50,5 +53,5 @@ if (process.env.NODE_ENV !== 'test') {
   })();
 }
 
-module.exports = { app };
-module.exports = { app };
+module.exports = app;
+module.exports.app = app;

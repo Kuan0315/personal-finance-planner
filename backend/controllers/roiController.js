@@ -1,8 +1,8 @@
 const RoiCalculation = require('../models/RoiCalculation');
 // Save ROI data
-const saveRoi = async(req, res) => {
-    try{
-        const{
+const saveRoi = async (req, res) => {
+    try {
+        const {
             mode,
             principal,
             monthlyContribution,
@@ -39,9 +39,13 @@ const saveRoi = async(req, res) => {
 };
 
 // Get ROI history for a user
-const getRoi = async(req, res) => {
-    try{
+const getRoi = async (req, res) => {
+    try {
         if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        if (req.params && req.params.userId && req.params.userId.toString() !== req.user._id.toString()) {
             return res.status(401).json({ message: 'Unauthorized' });
         }
 
@@ -53,10 +57,10 @@ const getRoi = async(req, res) => {
 }
 
 // Delete a specific ROI record
-const deleteRoi = async(req, res) => {
-    try{
+const deleteRoi = async (req, res) => {
+    try {
         const roi = await RoiCalculation.findById(req.params.roiId);
-        if(!roi){
+        if (!roi) {
             return res.status(404).json({ message: 'Roi record not found' });
         }
         if (!req.user || !req.user._id) {
@@ -69,7 +73,7 @@ const deleteRoi = async(req, res) => {
         }
 
         await RoiCalculation.findByIdAndDelete(req.params.roiId);
-        res.json({message: 'Roi record deleted successfully'});
+        res.json({ message: 'Roi record deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -78,7 +82,7 @@ const deleteRoi = async(req, res) => {
 // Delete many ROI records
 const deleteManyRoi = async (req, res) => {
     try {
-        if (!req.user || !req.user._id) 
+        if (!req.user || !req.user._id)
             return res.status(401).json({ message: 'Unauthorized' });
         const { ids } = req.body;
         if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ message: 'No ids provided' });

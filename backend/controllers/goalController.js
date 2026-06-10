@@ -48,6 +48,10 @@ exports.createGoal = async (req, res) => {
     const goal = await goalService.createGoal(req.user._id, req.body);
     res.status(201).json(goal); // → specifically means "something new was created successfully"
   } catch (err) {
+    if (err.name === 'ValidationError'){
+      return res.status(400).json({message: err.message});
+    }
+    
     res.status(500).json({ message: err.message });
   }
 };
