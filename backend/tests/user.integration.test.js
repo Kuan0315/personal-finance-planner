@@ -40,8 +40,8 @@ afterEach(async () => {
 // ─── 3.2 User Profile Management – Integration Tests ─────────────────────────
 describe('User Profile Management - Integration Tests', () => {
 
-  // IT-31 · Get Profile – Success
-  test('IT-31: GET /api/users/profile returns 200 with user data for authenticated user', async () => {
+  // IT-01 · Get Profile – Success
+  test('IT-01: GET /api/users/profile returns 200 with user data for authenticated user', async () => {
     const user = await User.create({
       name: 'Alice',
       email: 'alice@test.com',
@@ -63,16 +63,16 @@ describe('User Profile Management - Integration Tests', () => {
     expect(res.body).not.toHaveProperty('password');
   });
 
-  // IT-32 · Get Profile – No Auth Token
-  test('IT-32: GET /api/users/profile returns 401 when no token is provided', async () => {
+  // IT-02 · Get Profile – No Auth Token
+  test('IT-02: GET /api/users/profile returns 401 when no token is provided', async () => {
     const res = await request(app)
       .get('/api/users/profile');
 
     expect(res.status).toBe(401);
   });
 
-  // IT-33 · Get Profile – Invalid Token
-  test('IT-33: GET /api/users/profile returns 401 for an invalid JWT token', async () => {
+  // IT-03 · Get Profile – Invalid Token
+  test('IT-03: GET /api/users/profile returns 401 for an invalid JWT token', async () => {
     const res = await request(app)
       .get('/api/users/profile')
       .set('Authorization', 'Bearer invalidtoken123');
@@ -80,8 +80,8 @@ describe('User Profile Management - Integration Tests', () => {
     expect(res.status).toBe(401);
   });
 
-  // IT-34 · Update Profile – Success
-  test('IT-34: PUT /api/users/profile returns 200 and updates user fields', async () => {
+  // IT-04 · Update Profile – Success
+  test('IT-04: PUT /api/users/profile returns 200 and updates user fields', async () => {
     const user = await User.create({
       name: 'Bob',
       email: 'bob@test.com',
@@ -106,8 +106,8 @@ describe('User Profile Management - Integration Tests', () => {
     expect(res.body).toHaveProperty('country', 'Malaysia');
   });
 
-  // IT-35 · Update Profile – Persisted to Database
-  test('IT-35: PUT /api/users/profile persists changes to the database', async () => {
+  // IT-05 · Update Profile – Persisted to Database
+  test('IT-05: PUT /api/users/profile persists changes to the database', async () => {
     const user = await User.create({
       name: 'Carol',
       email: 'carol@test.com',
@@ -125,8 +125,8 @@ describe('User Profile Management - Integration Tests', () => {
     expect(updatedUser.occupation).toBe('Designer');
   });
 
-  // IT-36 · Update Profile – No Auth Token
-  test('IT-36: PUT /api/users/profile returns 401 when no token is provided', async () => {
+  // IT-06 · Update Profile – No Auth Token
+  test('IT-06: PUT /api/users/profile returns 401 when no token is provided', async () => {
     const res = await request(app)
       .put('/api/users/profile')
       .send({ name: 'Ghost' });
@@ -134,8 +134,8 @@ describe('User Profile Management - Integration Tests', () => {
     expect(res.status).toBe(401);
   });
 
-  // IT-37 · Update Profile – Partial Update Preserves Existing Fields
-  test('IT-37: PUT /api/users/profile partial update does not overwrite unspecified fields', async () => {
+  // IT-07 · Update Profile – Partial Update Preserves Existing Fields
+  test('IT-07: PUT /api/users/profile partial update does not overwrite unspecified fields', async () => {
     const user = await User.create({
       name: 'Dave',
       email: 'dave@test.com',
@@ -156,8 +156,8 @@ describe('User Profile Management - Integration Tests', () => {
     expect(res.body).toHaveProperty('city', 'Penang');
   });
 
-  // IT-38 · Delete Profile – Success
-  test('IT-38: DELETE /api/users/profile returns 200 and removes the user account', async () => {
+  // IT-08 · Delete Profile – Success
+  test('IT-08: DELETE /api/users/profile returns 200 and removes the user account', async () => {
     const user = await User.create({
       name: 'Eve',
       email: 'eve@test.com',
@@ -173,8 +173,8 @@ describe('User Profile Management - Integration Tests', () => {
     expect(res.body).toHaveProperty('message', 'User account deleted successfully');
   });
 
-  // IT-39 · Delete Profile – Removed from Database
-  test('IT-39: DELETE /api/users/profile permanently removes user from the database', async () => {
+  // IT-09 · Delete Profile – Removed from Database
+  test('IT-09: DELETE /api/users/profile permanently removes user from the database', async () => {
     const user = await User.create({
       name: 'Frank',
       email: 'frank@test.com',
@@ -190,16 +190,16 @@ describe('User Profile Management - Integration Tests', () => {
     expect(deletedUser).toBeNull();
   });
 
-  // IT-40 · Delete Profile – No Auth Token
-  test('IT-40: DELETE /api/users/profile returns 401 when no token is provided', async () => {
+  // IT-10 · Delete Profile – No Auth Token
+  test('IT-10: DELETE /api/users/profile returns 401 when no token is provided', async () => {
     const res = await request(app)
       .delete('/api/users/profile');
 
     expect(res.status).toBe(401);
   });
 
-  // IT-41 · Get Profile – All Fields Returned
-  test('IT-41: GET /api/users/profile returns all profile fields when fully populated', async () => {
+  // IT-11 · Get Profile – All Fields Returned
+  test('IT-11: GET /api/users/profile returns all profile fields when fully populated', async () => {
     const user = await User.create({
       name: 'Grace',
       email: 'grace@test.com',
@@ -231,8 +231,8 @@ describe('User Profile Management - Integration Tests', () => {
     expect(res.body).not.toHaveProperty('password');
   });
 
-  // IT-42 · Update Profile – Email Update
-  test('IT-42: PUT /api/users/profile allows updating the email address', async () => {
+  // IT-12 · Update Profile – Email Update
+  test('IT-12: PUT /api/users/profile allows updating the email address', async () => {
     const user = await User.create({
       name: 'Hank',
       email: 'hank@test.com',
