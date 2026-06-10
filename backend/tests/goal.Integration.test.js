@@ -42,8 +42,8 @@ afterAll(async () => {
 
 describe('Goal Module Integration Tests', () => {
 
-  // IT-16: Create Goal
-  test('IT-16: Should create goal and save to database', async () => {
+  // IT-18: Create Goal
+  test('IT-18: Should create goal and save to database', async () => {
     const res = await request(app).post('/api/goals')
       .set('Authorization', `Bearer ${token}`)
       .send({ name: 'Car', target: 20000, monthly: 500 });
@@ -54,8 +54,8 @@ describe('Goal Module Integration Tests', () => {
     expect(goalInDb.user.toString()).toBe(userId.toString());
   });
 
-  // IT-17: Get All Goals
-  test('IT-17: Get All Goals (API + Database)', async () => {
+  // IT-19: Get All Goals
+  test('IT-19: Get All Goals (API + Database)', async () => {
     await Goal.create({ user: userId, name: 'Travel', target: 5000, monthly: 200 });
     const res = await request(app).get('/api/goals')
       .set('Authorization', `Bearer ${token}`);
@@ -65,8 +65,8 @@ describe('Goal Module Integration Tests', () => {
     expect(res.body.length).toBe(1);
   });
 
-  // IT-18: Get Single Goal by ID
-  test('IT-18: Get Single Goal by ID (API + Database)', async () => {
+  // IT-20: Get Single Goal by ID
+  test('IT-20: Get Single Goal by ID (API + Database)', async () => {
     const goal = await Goal.create({ user: userId, name: 'Retirement', target: 100000, monthly: 1000 });
     const res = await request(app).get(`/api/goals/${goal._id}`)
       .set('Authorization', `Bearer ${token}`);
@@ -75,8 +75,8 @@ describe('Goal Module Integration Tests', () => {
     expect(res.body.name).toBe('Retirement');
   });
 
-  // IT-19: Update Goal
-  test('IT-19: Update Goal (API + Database)', async () => {
+  // IT-21: Update Goal
+  test('IT-21: Update Goal (API + Database)', async () => {
     const goal = await Goal.create({ user: userId, name: 'Study', target: 1000, monthly: 100 });
     const res = await request(app).put(`/api/goals/${goal._id}`)
       .set('Authorization', `Bearer ${token}`)
@@ -87,8 +87,8 @@ describe('Goal Module Integration Tests', () => {
     expect(updated.target).toBe(1500);
   });
 
-  // IT-20: Delete Goal
-  test('IT-20: Delete Goal (API + Database)', async () => {
+  // IT-22: Delete Goal
+  test('IT-22: Delete Goal (API + Database)', async () => {
     const goal = await Goal.create({ user: userId, name: 'DeleteMe', target: 100, monthly: 10 });
     const res = await request(app).delete(`/api/goals/${goal._id}`)
       .set('Authorization', `Bearer ${token}`);
