@@ -42,7 +42,7 @@ afterEach(async () => {
 });
 
 describe('ROI Integration tests (real DB)', () => {
-    test('INT-01: save roi -> returns 201 and roi created', async () => {
+    test('IT-23: save roi -> returns 201 and roi created', async () => {
         const user = await User.create({ name: 'Int ROI', email: 'roi1@test.com', password: 'pass' });
         const token = createTestJWT(user._id);
 
@@ -67,7 +67,7 @@ describe('ROI Integration tests (real DB)', () => {
         expect(res.body).toHaveProperty('mode', 'simple');
     });
 
-    test('INT-02: get roi history -> returns 200 and correct data', async () => {
+    test('IT-24: get roi history -> returns 200 and correct data', async () => {
         const user = await User.create({ name: 'Int History', email: 'roi2@test.com', password: 'pass' });
         const token = createTestJWT(user._id);
 
@@ -94,7 +94,7 @@ describe('ROI Integration tests (real DB)', () => {
         expect(res.body[0]).toHaveProperty('mode', 'simple');
     });
 
-    test('INT-03: delete roi -> returns 200 and record removed', async () => {
+    test('IT-25: delete roi -> returns 200 and record removed', async () => {
         const user = await User.create({ name: 'Int Delete', email: 'roi3@test.com', password: 'pass' });
         const token = createTestJWT(user._id);
 
@@ -123,7 +123,7 @@ describe('ROI Integration tests (real DB)', () => {
         expect(check).toBeNull();
     });
 
-    test('INT-04: get roi history for another user -> returns 401', async () => {
+    test('IT-26: get roi history for another user -> returns 401', async () => {
         const userA = await User.create({ name: 'User A', email: 'roi4a@test.com', password: 'pass' });
         const userB = await User.create({ name: 'User B', email: 'roi4b@test.com', password: 'pass' });
         const token = createTestJWT(userA._id);
@@ -136,7 +136,7 @@ describe('ROI Integration tests (real DB)', () => {
         expect(res.body).toHaveProperty('message', 'Unauthorized');
     });
 
-    test('INT-05: bulk delete roi -> returns 200 and deletedCount', async () => {
+    test('IT-27: bulk delete roi -> returns 200 and deletedCount', async () => {
         const user = await User.create({ name: 'Int Bulk', email: 'roi5@test.com', password: 'pass' });
         const token = createTestJWT(user._id);
 
