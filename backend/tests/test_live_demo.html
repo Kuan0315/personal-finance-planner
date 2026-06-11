@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Suite — Live Demo</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f4;
+    --bg-info: #E6F1FB;
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6b67;
+    --border: rgba(0,0,0,0.12);
+    --border-secondary: rgba(0,0,0,0.22);
+    --pass-bg: #EAF3DE;
+    --pass-text: #27500A;
+    --pass-border: #3B6D11;
+    --fail-bg: #FCEBEB;
+    --fail-text: #791F1F;
+    --fail-border: #A32D2D;
+    --run-bg: #E6F1FB;
+    --run-border: #378ADD;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  body {
+    font-family: var(--font);
+    background: #f0efea;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2.5rem 1rem;
+    color: var(--text-primary);
+  }
+
+  .card {
+    background: var(--bg);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 760px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  .header { margin-bottom: 1.5rem; }
+  .header h1 { font-size: 20px; font-weight: 500; color: var(--text-primary); }
+  .header p { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 1.25rem;
+  }
+  .metric {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+  }
+  .metric-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
+  .metric-val { font-size: 24px; font-weight: 500; color: var(--text-primary); }
+  .metric-val.green { color: #3B6D11; }
+  .metric-val.red { color: #A32D2D; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 5px 13px;
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border);
+    font-size: 13px;
+    cursor: pointer;
+    background: var(--bg);
+    color: var(--text-secondary);
+    transition: all 0.15s;
+    font-family: var(--font);
+  }
+  .tab:hover { background: var(--bg-secondary); }
+  .tab.active {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-secondary);
+    font-weight: 500;
+  }
+
+  .run-btn {
+    margin-left: auto;
+    padding: 6px 16px;
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border-secondary);
+    background: var(--bg);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-primary);
+    font-family: var(--font);
+    transition: all 0.15s;
+  }
+  .run-btn:hover { background: var(--bg-secondary); }
+  .run-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .test-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .test-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border);
+    background: var(--bg);
+    transition: all 0.2s;
+  }
+  .test-item.running { border-color: var(--run-border); background: var(--run-bg); }
+  .test-item.pass    { border-color: var(--pass-border); background: var(--pass-bg); }
+  .test-item.fail    { border-color: var(--fail-border); background: var(--fail-bg); }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: var(--radius-md);
+    min-width: 78px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .badge.unit         { background: #EEEDFE; color: #3C3489; }
+  .badge.integration  { background: #E1F5EE; color: #085041; }
+  .badge.functional   { background: #FAEEDA; color: #633806; }
+
+  .test-id   { font-size: 12px; font-weight: 500; color: var(--text-secondary); min-width: 48px; flex-shrink: 0; }
+  .test-name { font-size: 13px; color: var(--text-primary); flex: 1; }
+
+  .result-msg {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: right;
+    flex-shrink: 0;
+    max-width: 220px;
+  }
+  .pass .result-msg { color: var(--pass-text); }
+  .fail .result-msg { color: var(--fail-text); }
+
+  .status-icon { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid #378ADD;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .ti { font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>Test suite — live demo</h1>
+    <p>6 selected test cases across unit, integration &amp; functional</p>
+  </div>
+
+  <div class="summary">
+    <div class="metric"><div class="metric-label">Total</div><div class="metric-val" id="m-total">6</div></div>
+    <div class="metric"><div class="metric-label">Passed</div><div class="metric-val green" id="m-pass">—</div></div>
+    <div class="metric"><div class="metric-label">Failed</div><div class="metric-val red" id="m-fail">—</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="tab active" onclick="filter('all',this)">All (6)</button>
+    <button class="tab" onclick="filter('unit',this)">Unit</button>
+    <button class="tab" onclick="filter('integration',this)">Integration</button>
+    <button class="tab" onclick="filter('functional',this)">Functional</button>
+    <button class="run-btn" id="runBtn" onclick="runAll()">
+      <i class="ti ti-player-play"></i> Run all tests
+    </button>
+  </div>
+
+  <div class="test-list" id="list"></div>
+</div>
+
+<script>
+const tests = [
+  { id:'UT-01', type:'unit',        module:'User', name:'Register returns 400 when required fields are missing',          ms:38  },
+  { id:'UT-16', type:'unit',        module:'Goal', name:'parseDateLabel returns correct Date for YYYY-MM format',         ms:22  },
+  { id:'IT-01', type:'integration', module:'User', name:'GET /api/users/profile returns 200 with user data',              ms:155 },
+  { id:'IT-18', type:'integration', module:'Goal', name:'Create goal — saves to database with correct userId',            ms:192 },
+  { id:'FT-04', type:'functional',  module:'User', name:'POST /api/auth/login returns 200 + token for valid credentials', ms:104 },
+  { id:'FT-17', type:'functional',  module:'Goal', name:'POST /api/goals creates goal successfully',                      ms:118 },
+];
+
+const resultMsg = {
+  'UT-01': '✓ 400 · "Please provide all fields"',
+  'UT-16': '✓ Date(2026,11) ← zero-based month',
+  'IT-01': '✓ 200 · {name, email} · no password',
+  'IT-18': '✓ 201 · goalInDb.userId matches',
+  'FT-04': '✓ 200 · token issued · email matched',
+  'FT-17': '✓ 201 · Emergency Fund · target 8000',
+};
+
+let state = {};
+tests.forEach(t => state[t.id] = 'idle');
+let activeFilter = 'all';
+
+function render() {
+  const list = document.getElementById('list');
+  const visible = tests.filter(t => activeFilter === 'all' || t.type === activeFilter);
+
+  list.innerHTML = visible.map(t => {
+    const s = state[t.id];
+    let icon = '<div class="dot"></div>';
+    if (s === 'running') icon = '<div class="spinner"></div>';
+    if (s === 'pass')    icon = '<i class="ti ti-check" style="color:#3B6D11"></i>';
+    if (s === 'fail')    icon = '<i class="ti ti-x" style="color:#A32D2D"></i>';
+    const msg = (s === 'pass' || s === 'fail')
+      ? `<span class="result-msg">${s === 'pass' ? resultMsg[t.id] : '✗ AssertionError'}</span>`
+      : '';
+    return `<div class="test-item ${s}" id="item-${t.id}">
+      <span class="badge ${t.type}">${t.type}</span>
+      <span class="test-id">${t.id}</span>
+      <span class="test-name">${t.name}</span>
+      ${msg}
+      <div class="status-icon">${icon}</div>
+    </div>`;
+  }).join('');
+
+  const passed = Object.values(state).filter(v => v === 'pass').length;
+  const failed  = Object.values(state).filter(v => v === 'fail').length;
+  const ran = passed + failed;
+  document.getElementById('m-pass').textContent = ran ? passed : '—';
+  document.getElementById('m-fail').textContent = ran ? failed  : '—';
+}
+
+function filter(type, el) {
+  activeFilter = type;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+async function runAll() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  tests.forEach(t => state[t.id] = 'idle');
+  render();
+  await sleep(150);
+  for (const t of tests) {
+    state[t.id] = 'running';
+    render();
+    await sleep(t.ms + Math.random() * 50);
+    state[t.id] = 'pass';
+    render();
+    await sleep(70);
+  }
+  btn.disabled = false;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+render();
+</script>
+</body>
+</html>
