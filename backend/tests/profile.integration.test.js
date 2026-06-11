@@ -3,8 +3,8 @@ const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const jwt = require("jsonwebtoken");
 
-const app = require("../../app"); // Change to your Express app path
-const User = require("../../models/User"); // Change to your User model path
+const app = require("../server");
+const User = require("../models/User");
 
 let mongoServer;
 

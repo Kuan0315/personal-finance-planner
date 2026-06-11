@@ -12,11 +12,18 @@ app.use(express.json());
 app.get('/api/market/insights', getMarketInsights);
 
 describe('Market Dashboard Integration Testing', () => {
+  beforeAll(() => {
+    jest.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  afterAll(() => {
+    console.info.mockRestore();
+  });
 
   // =========================
-  // IT-01 API Status Test
+  // IT-28 API Status Test
   // =========================
-  test('IT-01: GET /api/market/insights returns valid status', async () => {
+  test('IT-28: GET /api/market/insights returns valid status', async () => {
 
     const res = await request(app)
       .get('/api/market/insights');
@@ -26,9 +33,9 @@ describe('Market Dashboard Integration Testing', () => {
   });
 
   // =========================
-  // IT-02 JSON Response Format
+  // IT-29 JSON Response Format
   // =========================
-  test('IT-02: GET /api/market/insights returns JSON response', async () => {
+  test('IT-29: GET /api/market/insights returns JSON response', async () => {
 
     const res = await request(app)
       .get('/api/market/insights');
@@ -39,9 +46,9 @@ describe('Market Dashboard Integration Testing', () => {
   });
 
   // =========================
-  // IT-03 Success Field Validation
+  // IT-30 Success Field Validation
   // =========================
-  test('IT-03: GET /api/market/insights contains success field', async () => {
+  test('IT-30: GET /api/market/insights contains success field', async () => {
 
     const res = await request(app)
       .get('/api/market/insights');
@@ -52,9 +59,9 @@ describe('Market Dashboard Integration Testing', () => {
   });
 
   // =========================
-  // IT-04 News Data Integration
+  // IT-31 News Data Integration
   // =========================
-  test('IT-04: GET /api/market/insights returns news data array', async () => {
+  test('IT-31: GET /api/market/insights returns news data array', async () => {
 
     const res = await request(app)
       .get('/api/market/insights');
@@ -67,9 +74,9 @@ describe('Market Dashboard Integration Testing', () => {
   });
 
   // =========================
-  // IT-05 Market Trend Data Integration
+  // IT-32 Market Trend Data Integration
   // =========================
-  test('IT-05: GET /api/market/insights returns market trend information', async () => {
+  test('IT-32: GET /api/market/insights returns market trend information', async () => {
 
     const res = await request(app)
       .get('/api/market/insights');
